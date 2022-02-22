@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Colocacion de creditos - Programa Usura Cero</title>
+	<meta charset="utf-8" />
+	<meta content="utf-8" http-equiv="encoding">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- Load d3.js -->
+	<script type="text/javascript" src="./d3.v4.js"></script>
+	<script type="text/javascript" src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+	<script type="text/javascript" src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.7.1/d3-tip.min.js"></script>
+	
+	<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header>
+	<h1>Colocacion de creditos - Programa Usura Cero</h1>
+</header>
+
+<label>Elija un año:
+	<select id="periodo" class="periodo">
+		<option value="">Seleccione</option>
+		<option value="2019">2019</option>
+		<option value="2020">2020</option>
+		<option value="2021">2021</option>
+	</select">
+</label>
+
+<p id="demo"></p>
+
+  <script type="text/javascript">
+
+	let filename;
+
+    var tip = d3.tip()
+        .attr('class', 'd3-tip')
+        .offset([-10, 0])
+		.html(function(d) {
+			var dataRow = data.get(d.properties.id);
+			   if (dataRow) {
+					//console.log(dataRow);
+					let content = '<div>' 
+								+ '<strong>Departamento: </strong>' + '<span>' + dataRow.Departamento + '</span>' + '</br>' 
+								+ '<strong>Creditos: </strong>' + '<span>' + dataRow.Creditos + '</span>' + '</br>' 
+								+ '<strong>Monto: </strong>' + '<span>' + dataRow.Monto + '</span>' + '</br>' 
+								+ '<strong>Socias: </strong>' + '<span>' + dataRow.Socias + '</span>'
+								+ '</div>';
+				   //return dataRow.Departamento + ": " + dataRow.Creditos;
+				   return content;
+			   } else {
+				   //console.log("no dataRow", d);
+				   return d.properties.name + ": No data.";
+			   }
+		});
+	
+	var svg = d3.select('body').append('svg');
+
+	var periodo = d3.select('#periodo').on('change', function(a) {
+		currentKey = d3.select(this).property('value');
+		updateMapData();
+	});
+	
+	svg.call(tip);
+	
+    var projection = d3.geoMercator()
+      .scale((1 << 15) / 2 / Math.PI)
+	  .center([-86, 13]);
+
+    var path = d3.geoPath().projection(projection);
+	
+	var data = d3.map();
+	var dato = d3.map();
+	
+	var colorScale = d3.scaleThreshold()
+	  .domain([4170.9558001100004, 1093.7554848699999, 4829.7747924400001, 6421.1097066599996, 2279.9063368699999, 1062.56140772, 9286.8797269099996, 5076.2801659799998, 1743.44671825, 3479.8092156500002, 617.33860749400003, 6833.8717519700003, 3450.0473972099999, 32997.23336920001, 27617.328948599999, 7532.9410995300004, 2157.6767314099998])
+	  .range(d3.schemeBlues[7]);
+	
+	d3.queue()
+	  .defer(d3.json, 'departamento.geojson')
+	  .defer(d3.csv, 'departamento.csv', typeAndSet)
+	  .await(createMap);
+
+	function updateMapData() {
+		filename = currentKey + ".csv"
+		d3.queue()
+	  	  .defer(d3.json, 'departamento.geojson')
+	  	  .defer(d3.csv, filename, typeAndSet)
+	      .await(createMap);
+	}
+
+	function typeAndSet(d) {
+		d.Credito = +d.Credito;
+		data.set(d.id, d);
+	}
+	
+	function createMap(error, geojson) {
+	
+		let mouseOver = function(d) {
+		tip.show(d);
+			d3.selectAll('.Departament')
+			  .transition()
+			  .duration(200)
+			  .style('opacity', .5)
+			d3.select(this)
+			  .transition()
+			  .duration(200)
+			  .style('opacity', 1)
+			  .style('stroke', 'black')
+		}
+
+		let mouseLeave = function(d) {
+		tip.hide(d);
+			d3.selectAll('.Departament')
+			  .transition()
+			  .duration(200)
+			  .style('opacity', .8)
+			d3.select(this)
+			  .transition()
+			  .duration(200)
+			  .style('stroke', 'transparent')
+		}
+		
+		svg.append('g')
+			.selectAll('path')
+			.data(geojson.features)
+			.enter()
+			.append('path')
+			.attr('d', path)
+			.attr('fill', function(d) { return colorScale(d.properties.area_km2); })
+			.style('stroke', 'transparent')
+			.attr('class', 'dpto')
+			.style('opacity', .8)
+			.on('mouseover', mouseOver )
+			.on('mouseleave', mouseLeave );
+	};
+    
+  </script>
+
+</body>
+</html>
